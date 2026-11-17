@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sumpah Setia Aqabah - Permainan Sirah Tahun 4</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Cinzel & Plus Jakarta Sans -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Tone.js untuk Kesan Bunyi Sintetik (Tiada URL luar diperlukan) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <!-- Google MediaPipe Hands & Camera Utils CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
+    <style>
+        :root {
+            --font-title: 'Cinzel', serif;
+            --font-body: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            font-family: var(--font-body);
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #0f172a;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .font-cinzel {
+            font-family: var(--font-title);
+        }
+
+        /* Animasi Gegaran Skrin (Screen Shake) */
+        @keyframes screenShake {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            15% { transform: translate(-8px, -6px) rotate(-1deg); }
+            30% { transform: translate(8px, 6px) rotate(1deg); }
+            45% { transform: translate(-6px, 4px) rotate(-0.5deg); }
+            60% { transform: translate(6px, -4px) rotate(0.5deg); }
+            75% { transform: translate(-4px, -2px) rotate(0deg); }
+        }
+
+        .shake-effect {
+            animation: screenShake 0.35s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        /* Animasi Teks Skor Terapung */
+        @keyframes floatUpFade {
+            0% {
+                opacity: 1;
+                transform: translate(-50%, 0) scale(0.8);
+            }
+            40% {
+                opacity: 1;
+                transform: translate(-50%, -35px) scale(1.15);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -70px) scale(0.95);
+            }
+        }
+
+        .floating-feedback {
+            position: absolute;
+            pointer-events: none;
+            animation: floatUpFade 0.9s ease-out forwards;
+            z-index: 40;
+            text-shadow: 0 4px 10px rgba(0, 0, 0, 0.8);
+        }
+
+        /* Animasi Bintang Berkelip di Langit Mekah */
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; transform: scale(0.9); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        .star {
+            animation: twinkle 3s infinite ease-in-out;
+        }
+
+        /* Skrol Perjanjian (Perkamen Klasik) */
+        .parchment-scroll {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 50%, #f59e0b 100%);
+            box-shadow: 0 12px 25px -5px rgba(0, 0, 0, 0.7), inset 0 0 15px rgba(180, 83, 9, 0.4);
+            border-top: 8px solid #78350f;
+            border-bottom: 8px solid #78350f;
+            transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
+        }
+
+        /* Lubang Gua Bukit Aqabah */
+        .cave-hole {
+            background: radial-gradient(ellipse at center, #090d16 40%, #1c1917 85%, #44403c 100%);
+            box-shadow: inset 0 15px 25px rgba(0,0,0,0.95), 0 4px 10px rgba(0,0,0,0.6);
+            border: 3px solid #57534e;
+        }
+
+        /* Custom Scrollbar untuk Rumusan Akhir */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d97706;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="relative w-screen h-screen overflow-hidden bg-slate-950 text-amber-50">
+
+    <!-- Bekas Utama untuk Kesan Gegaran Skrin -->
+    <div id="gameContainer" class="relative w-full h-full overflow-hidden">
+
+        <!-- 1. Lapisan Video Webcam Masa Nyata (Dicerminkan / Mirrored) -->
+        <video id="webcamVideo" class="hidden" playsinline autoplay muted></video>
+        <canvas id="bgCanvas" class="absolute inset-0 w-full h-full object-cover z-0"></canvas>
+
+        <!-- 2. Lapisan Grafik Bukit Mekah & Langit Malam Aqabah (SVG Overlay Separa Lutsinar) -->
+        <div class="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between">
+            <!-- Langit Malam & Bulan Sabit -->
+            <div class="w-full h-1/3 bg-gradient-to-b from-slate-950/85 via-indigo-950/45 to-transparent relative">
+                <!-- Bulan Sabit & Bintang -->
+                <svg class="absolute top-6 right-10 w-16 h-16 text-amber-300/80 drop-shadow-[0_0_15px_rgba(252,211,77,0.6)]" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/>
+                </svg>
+                <div class="star absolute top-10 left-1/4 w-1.5 h-1.5 bg-amber-200 rounded-full" style="animation-delay: 0.2s;"></div>
+                <div class="star absolute top-20 left-1/3 w-2 h-2 bg-white rounded-full" style="animation-delay: 1.1s;"></div>
+                <div class="star absolute top-14 right-1/3 w-1.5 h-1.5 bg-amber-100 rounded-full" style="animation-delay: 2.3s;"></div>
+                <div class="star absolute top-28 right-1/4 w-1 h-1 bg-white rounded-full" style="animation-delay: 0.7s;"></div>
+            </div>
+
+            <!-- Siluet Bukit-Bukau Batu Mekah (Bukit Aqabah) -->
+            <svg class="w-full h-2/3 object-cover opacity-80" viewBox="0 0 1440 600" preserveAspectRatio="none">
+                <defs>
+                    <linearGradient id="mountainBack" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#292524" stop-opacity="0.7"/>
+                        <stop offset="100%" stop-color="#0c0a09" stop-opacity="0.95"/>
+                    </linearGradient>
+                    <linearGradient id="mountainFront" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stop-color="#44403c" stop-opacity="0.8"/>
+                        <stop offset="100%" stop-color="#1c1917" stop-opacity="0.98"/>
+                    </linearGradient>
+                </defs>
+                <!-- Banjaran Bukit Belakang -->
+                <path fill="url(#mountainBack)" d="M0,600 L0,250 L180,140 L390,280 L620,110 L890,260 L1140,130 L1320,230 L1440,180 L1440,600 Z"/>
+                <!-- Bukit Batu Hadapan (Lembah Aqabah) -->
+                <path fill="url(#mountainFront)" d="M0,600 L0,350 L240,260 L480,380 L740,230 L1020,370 L1260,250 L1440,340 L1440,600 Z"/>
+            </svg>
+        </div>
+
+        <!-- 3. Grid 6 Lubang Gua Bukit Aqabah (Kawasan Permainan Utama) -->
+        <div id="playArea" class="absolute inset-0 z-20 flex flex-col justify-between pt-20 pb-6 px-4 sm:px-10 md:px-16">
+            <!-- Grid 3x2 untuk 6 Lubang Gua -->
+            <div id="cavesGrid" class="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8 w-full h-full max-w-6xl mx-auto items-center justify-items-center">
+                <!-- 6 Lubang Gua akan dijana oleh JavaScript -->
+            </div>
+        </div>
+
+        <!-- 4. Kanvas Penjejakan Tangan (Kursor Tapak Tangan Terbuka & Zarah) -->
+        <canvas id="handCanvas" class="absolute inset-0 w-full h-full pointer-events-none z-30"></canvas>
+
+        <!-- 5. HUD Atas (Skor, Kombo, Masa, Status Kamera) -->
+        <header id="hudHeader" class="hidden absolute top-0 left-0 right-0 z-40 px-4 py-3 sm:px-8 flex flex-wrap items-center justify-between gap-2 bg-gradient-to-b from-slate-950/90 to-transparent">
+            <!-- Skor & Kombo -->
+            <div class="flex items-center gap-3 sm:gap-5">
+                <div class="bg-stone-900/90 border border-amber-500/40 rounded-2xl px-4 py-2 shadow-lg backdrop-blur-md">
+                    <span class="text-xs uppercase tracking-wider text-amber-300/80 block font-semibold">Markah</span>
+                    <span id="scoreDisplay" class="text-2xl sm:text-3xl font-extrabold text-amber-400">0</span>
+                </div>
+
+                <div id="comboBadge" class="bg-amber-600/20 border border-amber-400/50 rounded-2xl px-3.5 py-2 shadow-lg backdrop-blur-md transition-transform duration-200">
+                    <span class="text-xs uppercase tracking-wider text-amber-200 block font-semibold">Kombo</span>
+                    <span id="comboDisplay" class="text-xl sm:text-2xl font-black text-amber-300">x1</span>
+                </div>
+            </div>
+
+            <!-- Tajuk Kecil & Petunjuk Kamera -->
+            <div class="hidden lg:flex flex-col items-center">
+                <h2 class="font-cinzel text-lg font-bold text-amber-300 tracking-wide">Sumpah Setia Aqabah</h2>
+                <div id="handStatusIndicator" class="flex items-center gap-2 text-xs text-emerald-400 bg-emerald-950/60 px-3 py-1 rounded-full border border-emerald-500/30 mt-0.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                    <span>Sedia: Buka Tapak Tangan Anda</span>
+                </div>
+            </div>
+
+            <!-- Pemasa 60 Saat -->
+            <div class="flex items-center gap-3">
+                <div id="timerBox" class="bg-stone-900/90 border border-amber-500/40 rounded-2xl px-4 py-2 shadow-lg backdrop-blur-md text-right">
+                    <span class="text-xs uppercase tracking-wider text-amber-300/80 block font-semibold">Masa</span>
+                    <span id="timerDisplay" class="text-2xl sm:text-3xl font-extrabold text-white">60s</span>
+                </div>
+                <button id="quitBtn" title="Tamatkan Permainan" class="p-3 bg-rose-950/80 hover:bg-rose-800 border border-rose-500/40 rounded-2xl text-rose-200 transition shadow-lg">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- 6. SKRIN MENU UTAMA & PANDUAN PERMAINAN -->
+        <div id="startScreen" class="absolute inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md overflow-y-auto">
+            <div class="max-w-3xl w-full bg-stone-900/95 border-2 border-amber-500/50 rounded-3xl p-6 sm:p-8 shadow-2xl relative my-auto">
+                <!-- Hiasan Bucu -->
+                <div class="text-center mb-6">
+                    <span class="inline-block px-4 py-1 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 text-xs sm:text-sm font-bold tracking-wider uppercase mb-2">
+                        Pendidikan Islam • Sirah Tahun 4
+                    </span>
+                    <h1 class="font-cinzel text-3xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200 drop-shadow-sm">
+                        Sumpah Setia Aqabah
+                    </h1>
+                    <p class="text-stone-300 text-sm sm:text-base mt-2 max-w-xl mx-auto">
+                        Uji kepantasan refleks dan kefahaman anda tentang peristiwa bersejarah Perjanjian Aqabah Pertama dan Kedua di lembah Mekah!
+                    </p>
+                </div>
+
+                <!-- Panduan Permainan -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div class="bg-stone-950/80 border border-amber-500/30 rounded-2xl p-4">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-400 font-bold text-xl">
+                                ✋
+                            </div>
+                            <h3 class="font-bold text-amber-300 text-base">Kawalan Tapak Tangan</h3>
+                        </div>
+                        <p class="text-xs sm:text-sm text-stone-300 leading-relaxed">
+                            Halakan kamera kepada tangan anda. <strong>Buka tapak tangan</strong> (5 jari terbuka) untuk mengaktifkan kursor bercahaya dan <strong>tepuk/sentuh</strong> skrol yang muncul dari 6 lubang gua.
+                        </p>
+                    </div>
+
+                    <div class="bg-stone-950/80 border border-emerald-500/30 rounded-2xl p-4">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold text-xl">
+                                📜
+                            </div>
+                            <h3 class="font-bold text-emerald-300 text-base">Fakta Tepat vs Palsu</h3>
+                        </div>
+                        <p class="text-xs sm:text-sm text-stone-300 leading-relaxed">
+                            Sentuh <strong>HANYA skrol isi Perjanjian Aqabah yang TEPAT</strong> (+100 markah & kombo). <strong>Biarkan skrol fakta palsu</strong> berlalu! Menyentuh fakta palsu akan menolak markah dan memadam kombo.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Status Kamera & Butang Mula -->
+                <div class="flex flex-col items-center gap-3">
+                    <div id="cameraStatusBox" class="w-full text-center py-2.5 px-4 rounded-xl bg-amber-950/50 border border-amber-500/30 text-amber-200 text-xs sm:text-sm">
+                        ⏳ Sila klik butang di bawah untuk membenarkan akses kamera & memulakan penjejakan tangan.
+                    </div>
+
+                    <button id="startBtn" class="w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-stone-950 font-extrabold text-lg sm:text-xl shadow-[0_0_25px_rgba(245,158,11,0.5)] transform transition active:scale-95 flex items-center justify-center gap-3 cursor-pointer">
+                        <span>MULA PERMAINAN (60 SAAT)</span>
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+                        </svg>
+                    </button>
+
+                    <p class="text-[11px] text-stone-400 text-center">
+                        *Nota: Jika peranti tiada kamera, anda juga boleh menggerakkan tetikus / sentuh skrin sebagai mod sandaran.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 7. SKRIN TAMAT & RUMUSAN ISI PERJANJIAN AQABAH -->
+        <div id="endScreen" class="hidden absolute inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-lg overflow-y-auto">
+            <div class="max-w-4xl w-full bg-stone-900/95 border-2 border-amber-500/60 rounded-3xl p-6 sm:p-8 shadow-2xl my-auto">
+                <div class="text-center border-b border-stone-700 pb-5 mb-5">
+                    <span class="text-xs font-bold uppercase tracking-widest text-amber-400">Masa Tamat!</span>
+                    <h2 class="font-cinzel text-3xl sm:text-4xl font-black text-white mt-1">Keputusan & Rumusan Sirah</h2>
+
+                    <!-- Statistik Skor Akhir -->
+                    <div class="grid grid-cols-3 gap-3 sm:gap-6 max-w-xl mx-auto mt-4">
+                        <div class="bg-stone-950/90 border border-amber-500/40 rounded-2xl p-3">
+                            <span class="text-xs text-stone-400 block">Markah Akhir</span>
+                            <span id="finalScore" class="text-2xl sm:text-3xl font-black text-amber-400">0</span>
+                        </div>
+                        <div class="bg-stone-950/90 border border-emerald-500/40 rounded-2xl p-3">
+                            <span class="text-xs text-stone-400 block">Skrol Tepat</span>
+                            <span id="finalCorrect" class="text-2xl sm:text-3xl font-black text-emerald-400">0</span>
+                        </div>
+                        <div class="bg-stone-950/90 border border-purple-500/40 rounded-2xl p-3">
+                            <span class="text-xs text-stone-400 block">Kombo Tertinggi</span>
+                            <span id="finalMaxCombo" class="text-2xl sm:text-3xl font-black text-purple-400">x1</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rumusan Isi Kandungan Perjanjian Aqabah (Sirah Tahun 4) -->
+                <div class="mb-6">
+                    <h3 class="font-bold text-amber-300 text-base sm:text-lg mb-3 flex items-center gap-2">
+                        <span>📖</span>
+                        <span>Rumusan Isi Kandungan Perjanjian Aqabah (Sirah Tahun 4)</span>
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-64 overflow-y-auto pr-1">
+                        <!-- Perjanjian Aqabah Pertama -->
+                        <div class="bg-stone-950/80 border border-amber-500/30 rounded-2xl p-4">
+                            <h4 class="font-bold text-amber-400 text-sm mb-2 border-b border-stone-800 pb-1">
+                                Perjanjian Aqabah Pertama (Tahun 12 Kenabian)
+                            </h4>
+                            <ul class="text-xs sm:text-sm text-stone-300 space-y-1.5 list-disc list-inside">
+                                <li>Tidak menyekutukan Allah SWT.</li>
+                                <li>Tidak mencuri dan tidak berzina.</li>
+                                <li>Tidak membunuh anak-anak.</li>
+                                <li>Tidak melakukan fitnah atau berdusta.</li>
+                                <li>Taat kepada perintah Rasulullah SAW dalam perkara kebaikan.</li>
+                            </ul>
+                        </div>
+
+                        <!-- Perjanjian Aqabah Kedua -->
+                        <div class="bg-stone-950/80 border border-emerald-500/30 rounded-2xl p-4">
+                            <h4 class="font-bold text-emerald-400 text-sm mb-2 border-b border-stone-800 pb-1">
+                                Perjanjian Aqabah Kedua (Tahun 13 Kenabian)
+                            </h4>
+                            <ul class="text-xs sm:text-sm text-stone-300 space-y-1.5 list-disc list-inside">
+                                <li>Mendengar dan taat kepada Rasulullah SAW semasa susah dan senang.</li>
+                                <li>Membelanjakan harta pada waktu senang dan susah.</li>
+                                <li>Menyeru kepada kebaikan dan mencegah kemungkaran (Amar Makruf Nahi Mungkar).</li>
+                                <li>Tetap menegakkan kebenaran tanpa takut celaan.</li>
+                                <li>Melindungi dan mempertahankan Rasulullah SAW sebagaimana melindungi keluarga sendiri.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Butang Main Semula -->
+                <div class="flex justify-center">
+                    <button id="restartBtn" class="px-8 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-stone-950 font-extrabold text-lg shadow-lg transform transition active:scale-95 flex items-center gap-2 cursor-pointer">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                        <span>MAIN SEMULA</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * ============================================================================
+         * SUMPAH SETIA AQABAH - APLIKASI PERMAINAN REFLEKS SIRAH TAHUN 4
+         * ============================================================================
+         * Menggunakan:
+         * 1. Google MediaPipe Hands untuk penjejakan tapak tangan terbuka (5 jari).
+         * 2. Tone.js untuk penjanaan bunyi kesan khas tanpa fail audio luaran.
+         * 3. Kanvas HTML5 Responsif untuk latar belakang kamera & kursor tangan.
+         */
+
+        // --- 1. BANK DATA SOALAN / SKROL PERJANJIAN AQABAH ---
+        const SCROLL_DATA = [
+            // Fakta Tepat (Perjanjian Aqabah 1 & 2)
+            { text: "Tidak menyekutukan Allah SWT", isTrue: true, category: "Aqabah 1" },
+            { text: "Tidak mencuri & tidak berzina", isTrue: true, category: "Aqabah 1" },
+            { text: "Tidak membunuh anak-anak", isTrue: true, category: "Aqabah 1" },
+            { text: "Tidak membuat fitnah & dusta", isTrue: true, category: "Aqabah 1" },
+            { text: "Taat perintah Nabi dalam kebaikan", isTrue: true, category: "Aqabah 1" },
+            { text: "Melindungi Rasulullah SAW di Madinah", isTrue: true, category: "Aqabah 2" },
+            { text: "Taat ketika waktu susah & senang", isTrue: true, category: "Aqabah 2" },
+            { text: "Menyeru kebaikan, cegah mungkar", isTrue: true, category: "Aqabah 2" },
+            { text: "Berinfak ketika senang & susah", isTrue: true, category: "Aqabah 2" },
+            { text: "Menegakkan kebenaran tanpa takut", isTrue: true, category: "Aqabah 2" },
+
+            // Fakta Palsu / Mengelirukan (Mesti Dibiarkan)
+            { text: "Menyerang kota Mekah serta-merta", isTrue: false, category: "Palsu" },
+            { text: "Membayar cukai kepada Quraisy", isTrue: false, category: "Palsu" },
+            { text: "Memutuskan hubungan dengan Ansar", isTrue: false, category: "Palsu" },
+            { text: "Meninggalkan solat ketika musafir", isTrue: false, category: "Palsu" },
+            { text: "Berhijrah ke negeri Habsyah sahaja", isTrue: false, category: "Palsu" },
+            { text: "Menyembah berhala ketika darurat", isTrue: false, category: "Palsu" },
+            { text: "Memulaukan penduduk Yathrib", isTrue: false, category: "Palsu" },
+            { text: "Mengumpul harta untuk bermewah", isTrue: false, category: "Palsu" }
+        ];
+
+        // --- 2. PEMBOLEHUBAH KEADAAN PERMAINAN (GAME STATE) ---
+        const state = {
+            isPlaying: false,
+            score: 0,
+            combo: 1,
+            maxCombo: 1,
+            correctHits: 0,
+            timeLeft: 60,
+            timerInterval: null,
+            spawnTimeout: null,
+            activeScrolls: new Map(), // caveIndex -> { data, element, timeoutId, hit }
+            handPos: { x: -100, y: -100, isOpen: false, active: false },
+            particles: [],
+            cameraReady: false,
+            audioInitialized: false
+        };
+
+        // --- 3. ELEMEN DOM ---
+        const gameContainer = document.getElementById('gameContainer');
+        const videoElement = document.getElementById('webcamVideo');
+        const bgCanvas = document.getElementById('bgCanvas');
+        const bgCtx = bgCanvas.getContext('2d');
+        const handCanvas = document.getElementById('handCanvas');
+        const handCtx = handCanvas.getContext('2d');
+        const cavesGrid = document.getElementById('cavesGrid');
+
+        const startScreen = document.getElementById('startScreen');
+        const endScreen = document.getElementById('endScreen');
+        const hudHeader = document.getElementById('hudHeader');
+        const startBtn = document.getElementById('startBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const quitBtn = document.getElementById('quitBtn');
+
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const comboDisplay = document.getElementById('comboDisplay');
+        const comboBadge = document.getElementById('comboBadge');
+        const timerDisplay = document.getElementById('timerDisplay');
+        const cameraStatusBox = document.getElementById('cameraStatusBox');
+        const handStatusIndicator = document.getElementById('handStatusIndicator');
+
+        // --- 4. PENJANA KESAN BUNYI SINTETIK (TONE.JS) ---
+        let hitSynth, wrongSynth, popSynth, endSynth;
+
+        async function initAudio() {
+            if (state.audioInitialized) return;
+            try {
+                await Tone.start();
+                // Bunyi tepukan skrol tepat (harmoni cerah)
+                hitSynth = new Tone.PolySynth(Tone.Synth, {
+                    oscillator: { type: "triangle" },
+                    envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.4 }
+                }).toDestination();
+
+                // Bunyi tersalah tepuk fakta palsu (nada rendah)
+                wrongSynth = new Tone.MembraneSynth({
+                    pitchDecay: 0.08,
+                    octaves: 3,
+                    oscillator: { type: "sawtooth" },
+                    envelope: { attack: 0.01, decay: 0.35, sustain: 0, release: 0.2 }
+                }).toDestination();
+
+                // Bunyi skrol muncul dari gua
+                popSynth = new Tone.Synth({
+                    oscillator: { type: "sine" },
+                    envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 }
+                }).toDestination();
+                popSynth.volume.value = -12;
+
+                // Bunyi tamat permainan
+                endSynth = new Tone.PolySynth(Tone.Synth).toDestination();
+
+                state.audioInitialized = true;
+            } catch (err) {
+                console.warn("Audio gagal dimulakan:", err);
+            }
+        }
+
+        function playSound(type, combo = 1) {
+            if (!state.audioInitialized) return;
+            try {
+                const now = Tone.now();
+                if (type === 'hit') {
+                    // Pic meningkat mengikut kombo
+                    const baseNotes = ["C5", "E5", "G5", "B5", "C6"];
+                    const noteIndex = Math.min(combo - 1, baseNotes.length - 1);
+                    hitSynth.triggerAttackRelease([baseNotes[noteIndex], "G5"], "16n", now);
+                } else if (type === 'wrong') {
+                    wrongSynth.triggerAttackRelease("G1", "8n", now);
+                } else if (type === 'pop') {
+                    popSynth.triggerAttackRelease("D4", "32n", now);
+                } else if (type === 'end') {
+                    endSynth.triggerAttackRelease(["C4", "E4", "G4", "C5"], "4n", now);
+                }
+            } catch (e) {
+                // Abaikan ralat audio kecil
+            }
+        }
+
+        // --- 5. BINA 6 LUBANG GUA BUKIT AQABAH ---
+        function createCaves() {
+            cavesGrid.innerHTML = '';
+            for (let i = 0; i < 6; i++) {
+                const caveWrapper = document.createElement('div');
+                caveWrapper.className = "relative w-full h-36 sm:h-44 md:h-48 flex items-end justify-center";
+                caveWrapper.dataset.caveIndex = i;
+
+                // Mulut Lubang Gua Batu
+                const caveHole = document.createElement('div');
+                caveHole.className = "cave-hole w-44 sm:w-56 md:w-64 h-24 sm:h-28 rounded-t-full relative overflow-visible flex items-end justify-center";
+
+                // Label Nombor Gua Kecil
+                const caveLabel = document.createElement('span');
+                caveLabel.className = "absolute bottom-1.5 text-[10px] font-bold tracking-widest text-stone-500 uppercase pointer-events-none";
+                caveLabel.textContent = `Gua ${i + 1}`;
+
+                // Bekas Skrol yang akan muncul keluar
+                const scrollSlot = document.createElement('div');
+                scrollSlot.id = `scroll-slot-${i}`;
+                scrollSlot.className = "absolute bottom-4 w-44 sm:w-56 md:w-60 z-20 flex justify-center items-center pointer-events-auto";
+
+                caveHole.appendChild(caveLabel);
+                caveHole.appendChild(scrollSlot);
+                caveWrapper.appendChild(caveHole);
+                cavesGrid.appendChild(caveWrapper);
+            }
+        }
+
+        // --- 6. PENJEJAKAN TANGAN GOOGLE MEDIAPIPE HANDS ---
+        let handsDetector = null;
+        let cameraInstance = null;
+
+        /**
+         * Mengesan sama ada tapak tangan terbuka (5 jari dihulurkan)
+         * dengan membandingkan jarak hujung jari ke pergelangan tangan (wrist)
+         * berbanding sendi tengah jari (PIP).
+         */
+        function isOpenPalm(landmarks) {
+            const wrist = landmarks[0];
+            // Indeks hujung jari & sendi tengah: Telunjuk(8,6), Tengah(12,10), Manis(16,14), Kelingking(20,18)
+            const fingerPairs = [
+                [8, 6],
+                [12, 10],
+                [16, 14],
+                [20, 18]
+            ];
+
+            let extendedFingers = 0;
+            for (const [tipIdx, pipIdx] of fingerPairs) {
+                const tip = landmarks[tipIdx];
+                const pip = landmarks[pipIdx];
+
+                const distTip = Math.hypot(tip.x - wrist.x, tip.y - wrist.y);
+                const distPip = Math.hypot(pip.x - wrist.x, pip.y - wrist.y);
+
+                if (distTip > distPip * 1.12) {
+                    extendedFingers++;
+                }
+            }
+
+            // Memerlukan sekurang-kurangnya 3 daripada 4 jari utama terbuka luas
+            return extendedFingers >= 3;
+        }
+
+        function onHandsResults(results) {
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                const landmarks = results.multiHandLandmarks[0];
+                // Titik tengah tapak tangan (Landmark 9: pangkal jari tengah)
+                const palmCenter = landmarks[9];
+
+                // Cerminkan koordinat X supaya selari dengan paparan webcam cermin
+                const screenX = (1 - palmCenter.x) * handCanvas.width;
+                const screenY = palmCenter.y * handCanvas.height;
+                const openStatus = isOpenPalm(landmarks);
+
+                state.handPos = {
+                    x: screenX,
+                    y: screenY,
+                    isOpen: openStatus,
+                    active: true
+                };
+
+                // Kemas kini penunjuk status di HUD
+                if (openStatus) {
+                    handStatusIndicator.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span><span>Tapak Tangan Terbuka (Aktif!)</span>`;
+                    handStatusIndicator.className = "flex items-center gap-2 text-xs text-emerald-300 bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-400/50 mt-0.5";
+                } else {
+                    handStatusIndicator.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span><span>Buka Tapak Tangan Anda</span>`;
+                    handStatusIndicator.className = "flex items-center gap-2 text-xs text-amber-300 bg-amber-950/80 px-3 py-1 rounded-full border border-amber-400/50 mt-0.5";
+                }
+
+                // Semak perlanggaran jika permainan sedang berjalan & tapak tangan terbuka
+                if (state.isPlaying && openStatus) {
+                    checkScrollCollisions(screenX, screenY);
+                }
+            } else {
+                state.handPos.active = false;
+                handStatusIndicator.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-400"></span><span>Tangan Tidak Dikesan</span>`;
+                handStatusIndicator.className = "flex items-center gap-2 text-xs text-rose-300 bg-rose-950/80 px-3 py-1 rounded-full border border-rose-400/40 mt-0.5";
+            }
+        }
+
+        async function setupMediaPipe() {
+            try {
+                cameraStatusBox.innerHTML = "⏳ Sedang mengaktifkan kamera & model AI MediaPipe Hands...";
+                handsDetector = new Hands({
+                    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+                });
+
+                handsDetector.setOptions({
+                    maxNumHands: 1,
+                    modelComplexity: 1,
+                    minDetectionConfidence: 0.65,
+                    minTrackingConfidence: 0.6
+                });
+
+                handsDetector.onResults(onHandsResults);
+
+                cameraInstance = new Camera(videoElement, {
+                    onFrame: async () => {
+                        if (videoElement.readyState >= 2) {
+                            await handsDetector.send({ image: videoElement });
+                        }
+                    },
+                    width: 1280,
+                    height: 720
+                });
+
+                await cameraInstance.start();
+                state.cameraReady = true;
+                cameraStatusBox.innerHTML = "✅ Kamera & Penjejak Tangan Sedia! Tekan MULA PERMAINAN.";
+                cameraStatusBox.className = "w-full text-center py-2.5 px-4 rounded-xl bg-emerald-950/70 border border-emerald-500/40 text-emerald-300 text-xs sm:text-sm";
+            } catch (error) {
+                console.warn("Kamera tidak dapat diakses, menggunakan mod tetikus/sentuhan:", error);
+                cameraStatusBox.innerHTML = "⚠️ Kamera tidak dikesan. Mod Tetikus / Sentuhan Skrin diaktifkan secara automatik.";
+                cameraStatusBox.className = "w-full text-center py-2.5 px-4 rounded-xl bg-amber-950/70 border border-amber-500/40 text-amber-300 text-xs sm:text-sm";
+            }
+        }
+
+        // --- 7. MOD SANDARAN TETIKUS / SENTUHAN (JIKA TIADA WEBCAM) ---
+        window.addEventListener('mousemove', (e) => {
+            if (!state.cameraReady && state.isPlaying) {
+                state.handPos = { x: e.clientX, y: e.clientY, isOpen: true, active: true };
+                checkScrollCollisions(e.clientX, e.clientY);
+            }
+        });
+
+        window.addEventListener('touchmove', (e) => {
+            if (!state.cameraReady && state.isPlaying && e.touches.length > 0) {
+                const touch = e.touches[0];
+                state.handPos = { x: touch.clientX, y: touch.clientY, isOpen: true, active: true };
+                checkScrollCollisions(touch.clientX, touch.clientY);
+            }
+        }, { passive: true });
+
+        // --- 8. LOGIK KEMUNCULAN SKROL & PENGESANAN TEPUKAN ---
+        function spawnScroll() {
+            if (!state.isPlaying) return;
+
+            // Cari lubang gua yang sedang kosong
+            const availableCaves = [];
+            for (let i = 0; i < 6; i++) {
+                if (!state.activeScrolls.has(i)) {
+                    availableCaves.push(i);
+                }
+            }
+
+            if (availableCaves.length > 0) {
+                const caveIndex = availableCaves[Math.floor(Math.random() * availableCaves.length)];
+                const scrollInfo = SCROLL_DATA[Math.floor(Math.random() * SCROLL_DATA.length)];
+                const slot = document.getElementById(`scroll-slot-${caveIndex}`);
+
+                // Bina elemen visual Skrol Perjanjian
+                const scrollEl = document.createElement('div');
+                scrollEl.className = "parchment-scroll w-full rounded-xl p-2.5 sm:p-3 text-center cursor-pointer transform scale-50 opacity-0 select-none shadow-2xl";
+                scrollEl.innerHTML = `
+                    <div class="flex items-center justify-center gap-1 mb-1">
+                        <span class="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-900/20 text-amber-950">
+                            Skrol Aqabah
+                        </span>
+                    </div>
+                    <p class="text-stone-950 font-extrabold text-xs sm:text-sm leading-snug">
+                        "${scrollInfo.text}"
+                    </p>
+                `;
+
+                // Benarkan klik terus sebagai sokongan tambahan
+                scrollEl.addEventListener('pointerdown', () => {
+                    if (state.isPlaying) handleScrollHit(caveIndex);
+                });
+
+                slot.innerHTML = '';
+                slot.appendChild(scrollEl);
+                playSound('pop');
+
+                // Animasi muncul keluar dari gua
+                requestAnimationFrame(() => {
+                    scrollEl.classList.remove('scale-50', 'opacity-0');
+                    scrollEl.classList.add('scale-100', 'opacity-100', '-translate-y-4');
+                });
+
+                // Tempoh skrol kekal kelihatan (antara 2.4 hingga 3.4 saat bergantung pada masa)
+                const stayDuration = Math.max(2000, 3200 - (60 - state.timeLeft) * 15);
+
+                const timeoutId = setTimeout(() => {
+                    hideScroll(caveIndex);
+                }, stayDuration);
+
+                state.activeScrolls.set(caveIndex, {
+                    data: scrollInfo,
+                    element: scrollEl,
+                    timeoutId: timeoutId,
+                    hit: false
+                });
+            }
+
+            // Jadualkan kemunculan skrol seterusnya
+            const nextSpawnDelay = Math.max(750, 1450 - (60 - state.timeLeft) * 10);
+            state.spawnTimeout = setTimeout(spawnScroll, nextSpawnDelay);
+        }
+
+        function hideScroll(caveIndex) {
+            const entry = state.activeScrolls.get(caveIndex);
+            if (!entry) return;
+
+            clearTimeout(entry.timeoutId);
+            const el = entry.element;
+            el.classList.remove('scale-100', 'opacity-100', '-translate-y-4');
+            el.classList.add('scale-50', 'opacity-0');
+
+            setTimeout(() => {
+                if (el.parentNode) el.parentNode.removeChild(el);
+                state.activeScrolls.delete(caveIndex);
+            }, 200);
+        }
+
+        function checkScrollCollisions(handX, handY) {
+            const hitRadius = 48; // Jejari kawasan tapak tangan
+
+            state.activeScrolls.forEach((entry, caveIndex) => {
+                if (entry.hit) return;
+                const rect = entry.element.getBoundingClientRect();
+
+                // Semak pertindihan bulatan tangan dengan kotak skrol
+                const closestX = Math.max(rect.left, Math.min(handX, rect.right));
+                const closestY = Math.max(rect.top, Math.min(handY, rect.bottom));
+                const distance = Math.hypot(handX - closestX, handY - closestY);
+
+                if (distance <= hitRadius) {
+                    handleScrollHit(caveIndex);
+                }
+            });
+        }
+
+        function handleScrollHit(caveIndex) {
+            const entry = state.activeScrolls.get(caveIndex);
+            if (!entry || entry.hit) return;
+
+            entry.hit = true;
+            clearTimeout(entry.timeoutId);
+
+            const rect = entry.element.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+
+            // Kesan Gegaran Skrin (Screen Shake)
+            triggerScreenShake();
+
+            if (entry.data.isTrue) {
+                // TEPAT! Isi kandungan Perjanjian Aqabah
+                const pointsEarned = 100 * state.combo;
+                state.score += pointsEarned;
+                state.correctHits++;
+                state.combo = Math.min(state.combo + 1, 10);
+                if (state.combo > state.maxCombo) state.maxCombo = state.combo;
+
+                playSound('hit', state.combo);
+                spawnParticles(centerX, centerY, '#34d399'); // Zarah hijau zamrud
+                showFloatingText(centerX, centerY, `+${pointsEarned} TEPAT!`, 'text-emerald-400');
+            } else {
+                // SALAH! Fakta palsu sepatutnya dibiarkan
+                state.score = Math.max(0, state.score - 50);
+                state.combo = 1;
+
+                playSound('wrong');
+                spawnParticles(centerX, centerY, '#f43f5e'); // Zarah merah
+                showFloatingText(centerX, centerY, `-50 FAKTA PALSU!`, 'text-rose-400');
+            }
+
+            updateHUD();
+            hideScroll(caveIndex);
+        }
+
+        // --- 9. KESAN VISUAL (GEGARAN SKRIN, ZARAH & TEKS TERAPUNG) ---
+        function triggerScreenShake() {
+            gameContainer.classList.remove('shake-effect');
+            void gameContainer.offsetWidth; // Paksa reflow untuk ulang animasi
+            gameContainer.classList.add('shake-effect');
+        }
+
+        function showFloatingText(x, y, message, colorClass) {
+            const el = document.createElement('div');
+            el.className = `floating-feedback font-black text-lg sm:text-2xl ${colorClass}`;
+            el.style.left = `${x}px`;
+            el.style.top = `${y}px`;
+            el.textContent = message;
+            gameContainer.appendChild(el);
+
+            setTimeout(() => {
+                if (el.parentNode) el.parentNode.removeChild(el);
+            }, 900);
+        }
+
+        function spawnParticles(x, y, color) {
+            for (let i = 0; i < 18; i++) {
+                const angle = (Math.PI * 2 * i) / 18;
+                const speed = 3 + Math.random() * 5;
+                state.particles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    radius: 4 + Math.random() * 4,
+                    color: color,
+                    alpha: 1
+                });
+            }
+        }
+
+        function updateHUD() {
+            scoreDisplay.textContent = state.score;
+            comboDisplay.textContent = `x${state.combo}`;
+
+            if (state.combo > 1) {
+                comboBadge.classList.add('scale-110', 'bg-amber-500/40');
+                setTimeout(() => comboBadge.classList.remove('scale-110'), 150);
+            } else {
+                comboBadge.classList.remove('bg-amber-500/40');
+            }
+        }
+
+        // --- 10. GELUNG RENDER KANVAS (WEBCAM + KURSOR TAPAK TANGAN + ZARAH) ---
+        function resizeCanvases() {
+            bgCanvas.width = window.innerWidth;
+            bgCanvas.height = window.innerHeight;
+            handCanvas.width = window.innerWidth;
+            handCanvas.height = window.innerHeight;
+        }
+
+        window.addEventListener('resize', resizeCanvases);
+
+        function renderLoop() {
+            // A. Lukis Latar Belakang Webcam Masa Nyata (Dicerminkan)
+            bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+            if (videoElement.readyState >= 2) {
+                bgCtx.save();
+                bgCtx.translate(bgCanvas.width, 0);
+                bgCtx.scale(-1, 1);
+
+                // Kira nisbah aspek 'cover' supaya video memenuhi skrin tanpa herotan
+                const videoRatio = videoElement.videoWidth / videoElement.videoHeight;
+                const canvasRatio = bgCanvas.width / bgCanvas.height;
+                let drawW, drawH, drawX, drawY;
+
+                if (canvasRatio > videoRatio) {
+                    drawW = bgCanvas.width;
+                    drawH = bgCanvas.width / videoRatio;
+                    drawX = 0;
+                    drawY = (bgCanvas.height - drawH) / 2;
+                } else {
+                    drawH = bgCanvas.height;
+                    drawW = bgCanvas.height * videoRatio;
+                    drawX = (bgCanvas.width - drawW) / 2;
+                    drawY = 0;
+                }
+
+                bgCtx.drawImage(videoElement, drawX, drawY, drawW, drawH);
+                bgCtx.restore();
+
+                // Lapisan gelap separa lutsinar untuk suasana malam Bukit Mekah
+                bgCtx.fillStyle = 'rgba(12, 10, 9, 0.45)';
+                bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+            } else {
+                // Latar belakang gradien malam jika kamera belum aktif
+                const grad = bgCtx.createLinearGradient(0, 0, 0, bgCanvas.height);
+                grad.addColorStop(0, '#090d16');
+                grad.addColorStop(1, '#1c1917');
+                bgCtx.fillStyle = grad;
+                bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+            }
+
+            // B. Lukis Kursor Tapak Tangan & Kesan Zarah pada handCanvas
+            handCtx.clearRect(0, 0, handCanvas.width, handCanvas.height);
+
+            // Kemas kini & lukis zarah letupan tepukan
+            for (let i = state.particles.length - 1; i >= 0; i--) {
+                const p = state.particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= 0.03;
+
+                if (p.alpha <= 0) {
+                    state.particles.splice(i, 1);
+                    continue;
+                }
+
+                handCtx.save();
+                handCtx.globalAlpha = p.alpha;
+                handCtx.fillStyle = p.color;
+                handCtx.beginPath();
+                handCtx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                handCtx.fill();
+                handCtx.restore();
+            }
+
+            // Lukis Kursor Penjejak Tapak Tangan
+            if (state.handPos.active && state.isPlaying) {
+                const { x, y, isOpen } = state.handPos;
+                handCtx.save();
+
+                if (isOpen) {
+                    // Gelung cahaya aktif (Tapak Tangan Terbuka)
+                    const pulse = Math.sin(Date.now() / 120) * 5;
+                    handCtx.beginPath();
+                    handCtx.arc(x, y, 42 + pulse, 0, Math.PI * 2);
+                    handCtx.fillStyle = 'rgba(251, 191, 36, 0.22)';
+                    handCtx.fill();
+
+                    handCtx.lineWidth = 4;
+                    handCtx.strokeStyle = '#fbbf24';
+                    handCtx.shadowColor = '#f59e0b';
+                    handCtx.shadowBlur = 20;
+                    handCtx.stroke();
+
+                    // Ikon Tapak Tangan di tengah
+                    handCtx.font = '34px sans-serif';
+                    handCtx.textAlign = 'center';
+                    handCtx.textBaseline = 'middle';
+                    handCtx.fillText('✋', x, y);
+                } else {
+                    // Penunjuk tangan tertutup (Tidak aktif menepuk)
+                    handCtx.beginPath();
+                    handCtx.arc(x, y, 26, 0, Math.PI * 2);
+                    handCtx.fillStyle = 'rgba(148, 163, 184, 0.25)';
+                    handCtx.fill();
+                    handCtx.lineWidth = 2;
+                    handCtx.strokeStyle = '#94a3b8';
+                    handCtx.stroke();
+
+                    handCtx.font = '24px sans-serif';
+                    handCtx.textAlign = 'center';
+                    handCtx.textBaseline = 'middle';
+                    handCtx.fillText('✊', x, y);
+                }
+
+                handCtx.restore();
+            }
+
+            requestAnimationFrame(renderLoop);
+        }
+
+        // --- 11. KAWALAN ALIRAN PERMAINAN (MULA, PEMASA 60 SAAT, TAMAT) ---
+        async function startGame() {
+            await initAudio();
+
+            // Tetapkan semula statistik
+            state.isPlaying = true;
+            state.score = 0;
+            state.combo = 1;
+            state.maxCombo = 1;
+            state.correctHits = 0;
+            state.timeLeft = 60;
+            state.particles = [];
+
+            // Kosongkan semua skrol sedia ada
+            state.activeScrolls.forEach((_, idx) => hideScroll(idx));
+            state.activeScrolls.clear();
+
+            updateHUD();
+            timerDisplay.textContent = `${state.timeLeft}s`;
+            timerDisplay.classList.remove('text-rose-500', 'animate-pulse');
+
+            // Tukar paparan skrin
+            startScreen.classList.add('hidden');
+            endScreen.classList.add('hidden');
+            hudHeader.classList.remove('hidden');
+
+            // Mulakan pemasa undur 60 saat
+            clearInterval(state.timerInterval);
+            state.timerInterval = setInterval(() => {
+                state.timeLeft--;
+                timerDisplay.textContent = `${state.timeLeft}s`;
+
+                if (state.timeLeft <= 10) {
+                    timerDisplay.classList.add('text-rose-500', 'animate-pulse');
+                }
+
+                if (state.timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+
+            // Mulakan kemunculan skrol pertama
+            clearTimeout(state.spawnTimeout);
+            spawnScroll();
+        }
+
+        function endGame() {
+            state.isPlaying = false;
+            clearInterval(state.timerInterval);
+            clearTimeout(state.spawnTimeout);
+
+            // Bersihkan skrol yang masih terbuka
+            state.activeScrolls.forEach((_, idx) => hideScroll(idx));
+            state.activeScrolls.clear();
+
+            playSound('end');
+
+            // Paparkan statistik di skrin tamat
+            document.getElementById('finalScore').textContent = state.score;
+            document.getElementById('finalCorrect').textContent = state.correctHits;
+            document.getElementById('finalMaxCombo').textContent = `x${state.maxCombo}`;
+
+            hudHeader.classList.add('hidden');
+            endScreen.classList.remove('hidden');
+        }
+
+        // --- 12. PENDENGAR ACARA (EVENT LISTENERS) ---
+        startBtn.addEventListener('click', startGame);
+        restartBtn.addEventListener('click', startGame);
+        quitBtn.addEventListener('click', endGame);
+
+        // --- 13. INISIALISASI PADA MUATAN HALAMAN ---
+        window.onload = function () {
+            resizeCanvases();
+            createCaves();
+            renderLoop();
+            setupMediaPipe();
+        };
+    </script>
+</body>
+</html>
